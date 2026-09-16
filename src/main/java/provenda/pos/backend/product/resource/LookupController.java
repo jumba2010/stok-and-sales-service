@@ -1,0 +1,11 @@
+package provenda.pos.backend.product.resource;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("lookup")
+public class LookupController {
+
+
+}

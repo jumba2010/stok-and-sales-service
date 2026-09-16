@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{branch.name.report}"></title>
+</head>
+<body>
+<h1 th:text="#{branch.name} + ': ' + ${branchName}"></h1>
+<p><strong th:text="#{nuit} + ': ' + ${nuit}"></strong></p>
+<p><strong th:text="#{address} + ': ' + ${address}"></strong></p>
+<p><strong th:text="#{contact} + ': ' + ${contact}"></strong></p>
+
+
+<h2 th:text="#{inventory.id} + ': ' + ${inventoryDetails.inventoryId}"></h2>
+<p><strong th:text="#{warehouse.id}"></strong>: <span th:text="${inventoryDetails.warehouseId}"></span></p>
+<p><strong th:text="#{date}"></strong>: <span th:text="${inventoryDetails.date}"></span></p>
+<p><strong th:text="#{created.by}"></strong>: <span th:text="${inventoryDetails.createdById}"></span></p>
+
+<h2 th:text="#{products}"></h2>
+<table border="1">
+    <thead>
+    <tr>
+        <th th:text="#{product.id}"></th>
+        <th th:text="#{name}"></th>
+        <th th:text="#{system.quantity}"></th>
+        <th th:text="#{physical.quantity}"></th>
+        <th th:text="#{adjustment}"></th>
+        <th th:text="#{reason}"></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="product : ${inventoryDetails.products}">
+        <td th:text="${product.productId}"></td>
+        <td th:text="${product.name}"></td>
+        <td th:text="${product.systemQuantity}"></td>
+        <td th:text="${product.physicalQuantity}"></td>
+        <td th:text="${product.adjustment}"></td>
+        <td th:text="${product.reason}"></td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
