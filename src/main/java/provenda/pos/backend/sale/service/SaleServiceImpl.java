@@ -1,6 +1,7 @@
 package provenda.pos.backend.sale.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import provenda.pos.backend.generic.service.AbstractServiceImpl;
 import provenda.pos.backend.sale.dao.SaleRepository;
@@ -8,6 +9,7 @@ import provenda.pos.backend.sale.entity.SaleEntity;
 import provenda.pos.backend.sale.entity.SaleStatus;
 import provenda.pos.backend.security.UserContext;
 
+@Service
 public class SaleServiceImpl extends AbstractServiceImpl<SaleEntity, Long> implements SaleService {
 
 	@Autowired
