@@ -28,20 +28,20 @@ from the same codebase.
 
 ```mermaid
 flowchart LR
-    Client([Web / Mobile POS]) --> APIGW[API Gateway]
-    APIGW --> Lambda[StockAndSalesHandler<br/>AWS Lambda]
-    Client -.local / container.-> Boot[Spring Boot app]
+    Client(["Web / Mobile POS"]) --> APIGW["API Gateway"]
+    APIGW --> Lambda["StockAndSalesHandler<br/>AWS Lambda"]
+    Client -. "local / container" .-> Boot["Spring Boot app"]
     Lambda --> App
     Boot --> App
 
-    subgraph App[Spring application]
+    subgraph App["Spring application"]
         direction TB
-        R[REST resources] --> S[Services<br/>command + query split]
-        S --> G[Generic lifecycle layer<br/>AbstractServiceImpl]
-        G --> D[(Spring Data JPA)]
+        R["REST resources"] --> S["Services<br/>command + query split"]
+        S --> G["Generic lifecycle layer<br/>AbstractServiceImpl"]
+        G --> D[("Spring Data JPA")]
     end
 
-    D --> DB[(MySQL<br/>Flyway migrations)]
+    D --> DB[("MySQL<br/>Flyway migrations")]
 ```
 
 - **Modular, package-by-feature layout** - `product`, `stock`, `sale`, `user`, each with its own `resource → service → dao → entity` slices.
