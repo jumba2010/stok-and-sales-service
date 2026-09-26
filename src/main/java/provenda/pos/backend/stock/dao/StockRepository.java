@@ -16,6 +16,11 @@ public interface StockRepository extends AbstractBaseRepository<StockEntity
 	
 List<StockEntity> findByAvailableQuanityGreaterThanOrderById(int quantity);
 
+/**
+ * Stock batches of a single product that still have units available, oldest first (FIFO order).
+ */
+List<StockEntity> findByProductIdAndAvailableQuanityGreaterThanOrderById(Long productId, int quantity);
+
 @Query("Select s from StockEntity s INNER JOIN FETCH s.product WHERE s.sucursalId = :sucursalId AND s.active = :active and s.state =:state")
 List<StockEntity> findStockBySucursalIdAndActiveAndState(@Param("sucursalId")Long sucursalId,@Param("active") boolean active,@Param("state") int state );
 }
