@@ -1,0 +1,19 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: stock_pos
+      MYSQL_USER: stock_pos
+      MYSQL_PASSWORD: stock_pos
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - stock_pos_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  stock_pos_data:
