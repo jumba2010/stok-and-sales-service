@@ -1,79 +1,84 @@
 package provenda.pos.backend.stock.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import java.util.List;
 
-import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
 import provenda.pos.backend.exceptions.BusinessException;
 import provenda.pos.backend.product.dao.ProductRepository;
+import provenda.pos.backend.product.entity.ProductEntity;
 import provenda.pos.backend.product.service.ProductService;
 import provenda.pos.backend.security.UserContext;
 import provenda.pos.backend.stock.dao.StockRepository;
 import provenda.pos.backend.stock.entity.ProductStock;
 import provenda.pos.backend.stock.entity.StockEntity;
 
-import java.util.List;
-
 /**
  * @author Judiao Mbaua
  *
  *         <p>
- *         This class will be responsible for caring all the logic about
- *         decrementing the Stock
+ *         Decrements stock for a product using <b>FIFO</b> (first-in, first-out)
+ *         consumption: the oldest stock batches of <i>that product</i> are drained
+ *         first, so the cost of goods sold reflects the purchase price of the
+ *         batches actually consumed.
+ *         </p>
+ *
+ *         <p>
+ *         The whole operation is atomic: if the product does not have enough
+ *         available quantity the request is rejected before anything is changed,
+ *         and the product total and the per-batch quantities are updated in the
+ *         same transaction so they can never drift apart.
  *         </p>
  */
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class StockRemoval implements StockUpdateType {
 
-	@Autowired
-	private ProductService productService;
+	private final ProductService productService;
 
-	@Autowired
-	private ProductRepository productRepo;
+	private final ProductRepository productRepo;
 
-	@Autowired
-	private StockRepository StockRepo;
+	private final StockRepository stockRepository;
 
 	@Override
-	public void updateStock(UserContext userContext, ProductStock productStock) {
+	@Transactional(rollbackFor = BusinessException.class)
+	public void updateStock(UserContext userContext, ProductStock productStock) throws BusinessException {
+		int requested = productStock.getQuantity();
+		if (requested <= 0) {
+			throw new BusinessException("stock.invalid.quantity", "Quantity to remove must be greater than zero");
+		}
 
-		// Fetch all stocks with available quantity greater than 0
-		List<StockEntity> stocks = StockRepo.findByAvailableQuanityGreaterThanOrderById(0);
+		ProductEntity product = productRepo.findById(productStock.getProductId())
+				.orElseThrow(() -> new BusinessException("product.not.found", "Product not found"));
 
-		// Update the product's price and total available quantity
-		productRepo.findById(productStock.getProductId()).ifPresent(p -> {
-			p.setCurrentPrice(productStock.getSellPrice());
-			p.setAvailableQuantity(p.getAvailableQuantity() - productStock.getQuantity()); // Decrement stock
+		// Only this product's batches, oldest first
+		List<StockEntity> batches = stockRepository
+				.findByProductIdAndAvailableQuanityGreaterThanOrderById(product.getId(), 0);
 
-			try {
-				// Call updateProduct with productId and updated ProductEntity
-				productService.updateProduct(userContext, p.getId(), p);
-			} catch (BusinessException e) {
-				throw new RuntimeException(e);
+		int available = batches.stream().mapToInt(StockEntity::getAvailableQuanity).sum();
+		if (available < requested) {
+			throw new BusinessException("stock.insufficient",
+					"Insufficient stock for product " + product.getId() + ": requested " + requested
+							+ ", available " + available);
+		}
+
+		int remaining = requested;
+		for (StockEntity batch : batches) {
+			if (remaining == 0) {
+				break;
 			}
-		});
+			int consumed = Math.min(batch.getAvailableQuanity(), remaining);
+			batch.setAvailableQuanity(batch.getAvailableQuanity() - consumed);
+			remaining -= consumed;
+		}
+		stockRepository.saveAll(batches);
 
-		// Decrement stock quantities across multiple stock entities
-		stocks.forEach(stock -> {
-			if (productStock.getQuantity() > 0) { // Continue until the quantity to decrement is zero
-				int difference = stock.getAvailableQuanity() - productStock.getQuantity();
-
-				if (difference < 0) {
-					// Fully consume this stock
-					productStock.setQuantity(productStock.getQuantity() - stock.getAvailableQuanity());
-					stock.setAvailableQuanity(0);
-				} else {
-					// Partially consume this stock
-					stock.setAvailableQuanity(difference);
-					productStock.setQuantity(0);
-				}
-
-
-				//stockRepository.save(stock);
-			}
-		});
+		if (productStock.getSellPrice() != null) {
+			product.setCurrentPrice(productStock.getSellPrice());
+		}
+		product.setAvailableQuantity(product.getAvailableQuantity() - requested);
+		productService.updateProduct(userContext, product.getId(), product);
 	}
-
-
 }
